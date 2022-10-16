@@ -1,8 +1,9 @@
-import React, { FC } from 'react';
+import React from 'react';
 import {
   Anchor,
   Button,
   Checkbox,
+  createStyles,
   Divider,
   Group,
   Paper,
@@ -16,9 +17,20 @@ import { useForm } from '@mantine/form';
 
 import { GoogleButton, TwitterButton } from '../SocialButtons/SocialButtons';
 
-interface AuthProps {}
+const useStyles = createStyles((theme) => ({
+  highlight: {
+    fontWeight: 700,
+    background:
+      theme.colorScheme === 'dark'
+        ? `-webkit-linear-gradient(${theme.colors.blue[1]}, ${theme.colors.blue[4]})`
+        : `-webkit-linear-gradient(${theme.primaryColor}, ${theme.colors.blue[4]})`,
+    '-webkit-background-clip': 'text',
+    '-webkit-text-fill-color': 'transparent',
+  },
+}));
 
-const Auth: FC<AuthProps> = () => {
+const Auth = () => {
+  const { classes } = useStyles();
   const [type, toggle] = useToggle(['login', 'register']);
   const form = useForm({
     initialValues: {
@@ -38,7 +50,7 @@ const Auth: FC<AuthProps> = () => {
     <div data-testid="Auth">
       <Paper radius="md" p="xl" withBorder>
         <Text size="lg" weight={500}>
-          Welcome to Invoices, {type} with
+          Welcome to <span className={classes.highlight}>Invoices</span>, {type} with
         </Text>
 
         <Group grow my="md">
@@ -62,7 +74,7 @@ const Auth: FC<AuthProps> = () => {
             <TextInput
               required
               label="Email"
-              placeholder="hello@mantine.dev"
+              placeholder="hello@bussey.dev"
               value={form.values.email}
               onChange={(event) => form.setFieldValue('email', event.currentTarget.value)}
               error={form.errors.email && 'Invalid email'}
