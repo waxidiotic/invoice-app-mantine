@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
+  Alert,
   Anchor,
   Button,
-  Checkbox,
   createStyles,
   Divider,
   Group,
@@ -14,8 +14,11 @@ import {
 } from '@mantine/core';
 import { upperFirst, useToggle } from '@mantine/hooks';
 import { useForm } from '@mantine/form';
+import { AuthError } from '@supabase/supabase-js';
+import { IconAlertCircle } from '@tabler/icons';
 
 import { GoogleButton, TwitterButton } from '../SocialButtons/SocialButtons';
+import { supabase } from '../../utils/supabase';
 
 const useStyles = createStyles((theme) => ({
   highlight: {
@@ -24,20 +27,20 @@ const useStyles = createStyles((theme) => ({
       theme.colorScheme === 'dark'
         ? `-webkit-linear-gradient(${theme.colors.blue[1]}, ${theme.colors.blue[4]})`
         : `-webkit-linear-gradient(${theme.primaryColor}, ${theme.colors.blue[4]})`,
-    '-webkit-background-clip': 'text',
-    '-webkit-text-fill-color': 'transparent',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
   },
 }));
 
 const Auth = () => {
   const { classes } = useStyles();
   const [type, toggle] = useToggle(['login', 'register']);
+  const [loading, setLoading] = useState(false);
+  const [errorAlert, setErrorAlert] = useState<AuthError | null>(null);
   const form = useForm({
     initialValues: {
       email: '',
-      name: '',
       password: '',
-      terms: true,
     },
 
     validate: {
@@ -45,6 +48,33 @@ const Auth = () => {
       password: (val) => (val.length <= 6 ? 'Password should include at least 6 characters' : null),
     },
   });
+
+  const handleLogin = async () => {
+    setLoading(true);
+    setErrorAlert(null);
+    if (type === 'login') {
+      try {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: form.values.email,
+          password: form.values.password,
+        });
+        if (error) throw error;
+      } catch (error: unknown) {
+        setErrorAlert(error as AuthError);
+      }
+    } else if (type === 'register') {
+      try {
+        const { error } = await supabase.auth.signUp({
+          email: form.values.email,
+          password: form.values.password,
+        });
+        if (error) throw error;
+      } catch (error: unknown) {
+        setErrorAlert(error as AuthError);
+      }
+    }
+    setLoading(false);
+  };
 
   return (
     <div data-testid="Auth">
@@ -54,23 +84,22 @@ const Auth = () => {
         </Text>
 
         <Group grow my="md">
-          <GoogleButton radius="xl">Google</GoogleButton>
-          <TwitterButton radius="xl">Twitter</TwitterButton>
+          <GoogleButton radius="xl" disabled>
+            Google
+          </GoogleButton>
+          <TwitterButton radius="xl" disabled>
+            Twitter
+          </TwitterButton>
         </Group>
 
         <Divider label="Or continue with email" labelPosition="center" my="lg" />
 
-        <form onSubmit={form.onSubmit(() => {})}>
+        <form
+          onSubmit={form.onSubmit(() => {
+            handleLogin();
+          })}
+        >
           <Stack>
-            {type === 'register' && (
-              <TextInput
-                label="Name"
-                placeholder="Your name"
-                value={form.values.name}
-                onChange={(event) => form.setFieldValue('name', event.currentTarget.value)}
-              />
-            )}
-
             <TextInput
               required
               label="Email"
@@ -88,15 +117,18 @@ const Auth = () => {
               onChange={(event) => form.setFieldValue('password', event.currentTarget.value)}
               error={form.errors.password && 'Password should include at least 6 characters'}
             />
-
-            {type === 'register' && (
-              <Checkbox
-                label="I accept terms and conditions"
-                checked={form.values.terms}
-                onChange={(event) => form.setFieldValue('terms', event.currentTarget.checked)}
-              />
-            )}
           </Stack>
+
+          {errorAlert && (
+            <Alert
+              icon={<IconAlertCircle size={16} />}
+              title="Authentication issue"
+              color="red"
+              mt="xl"
+            >
+              {errorAlert.message}
+            </Alert>
+          )}
 
           <Group position="apart" mt="xl">
             <Anchor
@@ -110,7 +142,9 @@ const Auth = () => {
                 ? 'Already have an account? Login'
                 : "Don't have an account? Register"}
             </Anchor>
-            <Button type="submit">{upperFirst(type)}</Button>
+            <Button type="submit" loading={loading}>
+              {upperFirst(type)}
+            </Button>
           </Group>
         </form>
       </Paper>
